@@ -1,9 +1,7 @@
 from asgi_correlation_id import CorrelationIdMiddleware, correlation_id
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
-from core.config import STATIC_DIR
 from core.lifespan import lifespan
 from core.middleware import RequestLoggingMiddleware
 
@@ -21,11 +19,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
-app.mount(
-    "/static",
-    StaticFiles(directory=STATIC_DIR),
-    name="static",
-)
 
 
 @app.get("/")

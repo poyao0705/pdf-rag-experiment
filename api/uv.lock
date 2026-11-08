@@ -48,7 +48,6 @@ source = { virtual = "." }
 dependencies = [
     { name = "asgi-correlation-id" },
     { name = "fastapi", extra = ["standard"] },
-    { name = "jinja2" },
 ]
 
 [package.dev-dependencies]
@@ -60,7 +59,6 @@ dev = [
 requires-dist = [
     { name = "asgi-correlation-id", specifier = ">=5.0.1" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.162.0" },
-    { name = "jinja2", specifier = ">=3.1.6" },
 ]
 
 [package.metadata.requires-dev]
