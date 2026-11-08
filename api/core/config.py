@@ -27,5 +27,5 @@ def get_settings() -> Settings:
     return Settings()  # type: ignore
 
 
-BASE_DIR: Path = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
+API_ROOT: Path = Path(__file__).resolve().parents[1]
+STATIC_DIR = API_ROOT / "static"
