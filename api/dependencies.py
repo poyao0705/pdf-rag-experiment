@@ -1,7 +1,10 @@
 from agents import OpenAIChatCompletionsModel
 from agents.sandbox import SandboxAgent
+from agents.sandbox.capabilities import Compaction, Shell
 from fastapi import Request
 from openai import AsyncOpenAI
+
+from modules.sandbox_tools import ChatCompletionsFilesystem
 
 
 def build_agent(client: AsyncOpenAI, *, model: str, instructions: str) -> SandboxAgent:
@@ -9,6 +12,7 @@ def build_agent(client: AsyncOpenAI, *, model: str, instructions: str) -> Sandbo
         name="OpenUI assistant",
         instructions=instructions,
         model=OpenAIChatCompletionsModel(model=model, openai_client=client),
+        capabilities=[ChatCompletionsFilesystem(), Shell(), Compaction()],
     )
 
 

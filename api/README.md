@@ -30,6 +30,8 @@ Successful responses use `application/x-ndjson` Chat Completions chunks. Only as
 
 The existing `GET /` health response is unchanged. The agent retains `UnixLocalSandboxClient` configuration and a 20-turn bound. No PDF tools or retrieval features have been added.
 
+The SDK's freeform `apply_patch` tool is adapted to a JSON function with a `patch` string argument for Chat Completions compatibility. It still uses the original sandbox editor and workspace checks; filesystem, shell, and compaction remain enabled. Boolean patch approvals are preserved. Custom patch approval callbacks fail closed until an explicit function-tool adapter is supplied.
+
 ## Tests and packaging
 
 Run `uv run pytest -q`. Tests are offline and provide their own fake configuration/model responses.
