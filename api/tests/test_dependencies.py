@@ -1,8 +1,10 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI, Request
 from openai import AsyncOpenAI
+from pydantic import SecretStr
 
 import core.lifespan as lifespan_module
 from dependencies import get_agent
@@ -22,11 +24,19 @@ def app(monkeypatch):
         "get_settings",
         lambda: SimpleNamespace(
             LOG_LEVEL="INFO",
-            THESYS_API_KEY="test-api-key",
+            THESYS_API_KEY=SecretStr("test-api-key"),
+            OPENUI_MODEL="test-model",
+            OPENUI_SPEC_PATH=Path("unused-test-spec"),
             THESYS_BASE_URL="https://example.test/v1",
         ),
     )
     monkeypatch.setattr(lifespan_module, "configure_logging", lambda level: None)
+    monkeypatch.setattr(
+        lifespan_module,
+        "cloud_system_prompt",
+        lambda path: "test prompt",
+        raising=False,
+    )
     return FastAPI(lifespan=lifespan_module.lifespan)
 
 
