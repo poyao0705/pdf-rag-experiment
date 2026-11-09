@@ -5,6 +5,7 @@ requires-python = ">=3.15"
 dependencies = [
     "asgi-correlation-id>=5.0.1",
     "fastapi[standard]>=0.162.0",
+    "openai-agents>=0.24.0",
 ]
 
 [dependency-groups]

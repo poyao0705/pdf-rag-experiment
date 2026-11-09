@@ -8,7 +8,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     # OPENAI_API_KEY: SecretStr
-    THESYS_API_KEY: SecretStr
+    THESYS_API_KEY: str
+    THESYS_BASE_URL: str = "https://api.thesys.dev/v1/embed"
+    OPENUI_MODEL: str = "gpt-6-luna"
 
     @field_validator("THESYS_API_KEY")
     def validate_secret_key(cls, value: SecretStr) -> SecretStr:
