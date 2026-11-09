@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated
 
 from agents import MaxTurnsExceeded, RunConfig
@@ -5,7 +6,7 @@ from agents.sandbox import SandboxAgent, SandboxRunConfig
 from agents.sandbox.sandboxes import UnixLocalSandboxClient
 from asgi_correlation_id import CorrelationIdMiddleware, correlation_id
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from openai import APIError
 from starlette.types import Receive, Scope, Send
 
@@ -67,11 +68,44 @@ class ChatStreamingResponse(StreamingResponse):
 
 
 @app.post("/api/chat")
-async def chat(body: ChatRequest, agent: AgentDep):
-    stream = await stream_message(
-        body.to_agent_input(),
-        agent=agent,
-        run_config=RunConfig(sandbox=SandboxRunConfig(client=UnixLocalSandboxClient())),
-        max_turns=20,
+async def chat(body: ChatRequest, agent: AgentDep, request: Request):
+    async def wait_for_disconnect():
+        while (await request.receive())["type"] != "http.disconnect":
+            pass
+
+    run = asyncio.create_task(
+        stream_message(
+            body.to_agent_input(),
+            agent=agent,
+            run_config=RunConfig(
+                sandbox=SandboxRunConfig(client=UnixLocalSandboxClient())
+            ),
+            max_turns=20,
+        )
     )
-    return ChatStreamingResponse(stream)
+    disconnect = asyncio.create_task(wait_for_disconnect())
+    try:
+        try:
+            done, _ = await asyncio.wait(
+                {run, disconnect}, return_when=asyncio.FIRST_COMPLETED
+            )
+            disconnected = disconnect in done
+            if not disconnected:
+                await (
+                    run
+                )  # Preserve the original exception for the HTTP error handlers.
+        finally:
+            disconnect.cancel()
+            if not run.done():
+                run.cancel()
+            await asyncio.gather(run, disconnect, return_exceptions=True)
+    except BaseException:
+        if run.done() and not run.cancelled() and run.exception() is None:
+            await run.result().aclose()
+        raise
+
+    if disconnected:
+        if not run.cancelled() and run.exception() is None:
+            await run.result().aclose()
+        return Response(status_code=499)
+    return ChatStreamingResponse(run.result())

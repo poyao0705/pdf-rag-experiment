@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from agents import MaxTurnsExceeded, RunConfig
+from agents import MaxTurnsExceeded, RunConfig, TResponseInputItem
 
 from modules.chat_service import stream_message
 
@@ -64,7 +64,7 @@ def setup_run(monkeypatch):
 
 async def test_streams_ordered_text_and_one_final_finish(setup_run):
     result, runner, agent, config = setup_run([text("one"), text("二")])
-    messages = [{"role": "user", "content": "real prompt"}]
+    messages: list[TResponseInputItem] = [{"role": "user", "content": "real prompt"}]
     stream = await stream_message(messages, agent=agent, run_config=config)
     chunks = [json.loads(line) async for line in stream]
     runner.assert_called_once_with(agent, messages, run_config=config, max_turns=20)

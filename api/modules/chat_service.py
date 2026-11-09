@@ -108,4 +108,3 @@ async def stream_message(
         await iterator.aclose()
         raise
     return PreparedStream(first, iterator)
-

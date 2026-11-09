@@ -7,7 +7,8 @@
     "generate": "openui generate src/library.ts --spec --out src/generated/spec.json",
     "dev": "vp run generate && vp dev",
     "build": "vp run generate && tsc && vp build",
-    "preview": "vp preview"
+    "preview": "vp preview",
+    "verify": "vp check && vp test && vp run build && node scripts/verify-build.mjs"
   },
   "dependencies": {
     "@openuidev/react-headless": "0.18.5",

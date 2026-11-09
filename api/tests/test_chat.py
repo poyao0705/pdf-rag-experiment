@@ -130,10 +130,19 @@ async def test_initial_agent_failure_is_safe_http_error(chat_setup):
     assert response.headers["x-request-id"]
 
 
-async def test_asgi_disconnect_closes_the_primed_stream(chat_setup):
+@pytest.mark.parametrize("phase", ["streaming", "priming"])
+async def test_asgi_disconnect_closes_the_primed_stream(chat_setup, phase):
     service, _ = chat_setup
     closed = asyncio.Event()
     sent_body = asyncio.Event()
+    priming = asyncio.Event()
+
+    async def wait_for_model(*args, **kwargs):
+        try:
+            priming.set()
+            await asyncio.Event().wait()
+        finally:
+            closed.set()
 
     async def body():
         try:
@@ -146,6 +155,8 @@ async def test_asgi_disconnect_closes_the_primed_stream(chat_setup):
     first = await anext(iterator)
     service.side_effect = None
     service.return_value = PreparedStream(first, iterator)
+    if phase == "priming":
+        service.side_effect = wait_for_model
     payload = json.dumps({"messages": [{"role": "user", "content": "hi"}]}).encode()
     received = False
 
@@ -154,7 +165,7 @@ async def test_asgi_disconnect_closes_the_primed_stream(chat_setup):
         if not received:
             received = True
             return {"type": "http.request", "body": payload, "more_body": False}
-        await sent_body.wait()
+        await (priming if phase == "priming" else sent_body).wait()
         return {"type": "http.disconnect"}
 
     async def send(message):
