@@ -6,6 +6,7 @@ from agents.sandbox import SandboxAgent, SandboxRunConfig
 from agents.sandbox.sandboxes import UnixLocalSandboxClient
 from asgi_correlation_id import CorrelationIdMiddleware, correlation_id
 from fastapi import Depends, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from openai import APIError
 from starlette.types import Receive, Scope, Send
@@ -45,6 +46,7 @@ async def agent_exception_handler(
 
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(CORSMiddleware, allow_origins=["*"])
 
 
 @app.get("/")
