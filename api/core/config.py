@@ -7,12 +7,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
-    OPENAI_API_KEY: SecretStr
+    # OPENAI_API_KEY: SecretStr
+    THESYS_API_KEY: SecretStr
 
-    @field_validator("OPENAI_API_KEY")
+    @field_validator("THESYS_API_KEY")
     def validate_secret_key(cls, value: SecretStr) -> SecretStr:
         if not value.get_secret_value().strip():
-            raise ValueError("OPENAI_API_KEY must not be blank")
+            raise ValueError("Secret key must not be blank")
         return value
 
     model_config = SettingsConfigDict(
