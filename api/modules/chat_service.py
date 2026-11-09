@@ -4,7 +4,7 @@ import time
 from collections.abc import AsyncGenerator, AsyncIterator
 from uuid import uuid4
 
-from agents import RunConfig, Runner, Session, TResponseInputItem
+from agents import RunConfig, Runner, TResponseInputItem
 from agents.sandbox import SandboxAgent
 
 from core.errors import public_error
@@ -109,17 +109,3 @@ async def stream_message(
         raise
     return PreparedStream(first, iterator)
 
-
-# Kept until the HTTP route is migrated in the next task.
-async def send_message(
-    message: str,
-    *,
-    agent: SandboxAgent,
-    session: Session,
-    run_config: RunConfig,
-    max_turns: int = 20,
-) -> str:
-    result = await Runner.run(
-        agent, message, session=session, run_config=run_config, max_turns=max_turns
-    )
-    return result.final_output

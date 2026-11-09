@@ -1,17 +1,20 @@
 from typing import Annotated
 
-from agents import MaxTurnsExceeded, RunConfig, SQLiteSession
+from agents import MaxTurnsExceeded, RunConfig
 from agents.sandbox import SandboxAgent, SandboxRunConfig
 from agents.sandbox.sandboxes import UnixLocalSandboxClient
 from asgi_correlation_id import CorrelationIdMiddleware, correlation_id
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import JSONResponse
-from openai import APITimeoutError, RateLimitError
+from fastapi.responses import JSONResponse, StreamingResponse
+from openai import APIError
+from starlette.types import Receive, Scope, Send
 
+from core.errors import public_error
 from core.lifespan import lifespan
 from core.middleware import RequestLoggingMiddleware
 from dependencies import get_agent
-from modules.chat_service import send_message
+from modules.chat_models import ChatRequest
+from modules.chat_service import PreparedStream, stream_message
 
 app = FastAPI(lifespan=lifespan)
 
@@ -25,21 +28,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
 
 
-@app.exception_handler(APITimeoutError)
-@app.exception_handler(RateLimitError)
+@app.exception_handler(APIError)
 @app.exception_handler(MaxTurnsExceeded)
 async def agent_exception_handler(
-    request: Request, exc: APITimeoutError | RateLimitError | MaxTurnsExceeded
+    request: Request, exc: APIError | MaxTurnsExceeded
 ) -> JSONResponse:
-    if isinstance(exc, APITimeoutError):
-        status_code = 504
-        detail = "Model request timed out"
-    elif isinstance(exc, RateLimitError):
-        status_code = 503
-        detail = "Model service temporarily unavailable"
-    else:
-        status_code = 502
-        detail = "Agent exceeded the maximum number of turns"
+    status_code, detail = public_error(exc)
 
     # Handled responses pass through the middleware that adds the request ID.
     return JSONResponse(
@@ -60,17 +54,24 @@ def main():
 AgentDep = Annotated[SandboxAgent, Depends(get_agent)]
 
 
+class ChatStreamingResponse(StreamingResponse):
+    def __init__(self, stream: PreparedStream):
+        super().__init__(stream, media_type="application/x-ndjson")
+        self.stream = stream
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            await self.stream.aclose()
+
+
 @app.post("/api/chat")
-async def chat(body: dict, agent: AgentDep):
-    # messages = body.get("messages", []) # TODO: replace this with actual message store in the future
-    session_id = body.get("session_id", "user_default")
-    messages = "Come up with mock financial data, and respond with annual report analysis"  # placeholder
-    session = SQLiteSession(session_id)
-    result = await send_message(
-        messages,
+async def chat(body: ChatRequest, agent: AgentDep):
+    stream = await stream_message(
+        body.to_agent_input(),
         agent=agent,
-        session=session,
         run_config=RunConfig(sandbox=SandboxRunConfig(client=UnixLocalSandboxClient())),
         max_turns=20,
     )
-    return result
+    return ChatStreamingResponse(stream)
