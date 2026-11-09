@@ -1,6 +1,6 @@
 from agents import OpenAIChatCompletionsModel
 from agents.sandbox import SandboxAgent
-from agents.sandbox.capabilities import Compaction, Shell
+from agents.sandbox.capabilities import Shell
 from fastapi import Request
 from openai import AsyncOpenAI
 
@@ -12,7 +12,8 @@ def build_agent(client: AsyncOpenAI, *, model: str, instructions: str) -> Sandbo
         name="OpenUI assistant",
         instructions=instructions,
         model=OpenAIChatCompletionsModel(model=model, openai_client=client),
-        capabilities=[ChatCompletionsFilesystem(), Shell(), Compaction()],
+        # Explicit allowlist: default Compaction adds Responses-only request options.
+        capabilities=[ChatCompletionsFilesystem(), Shell()],
     )
 
 
